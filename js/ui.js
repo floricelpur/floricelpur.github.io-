@@ -120,11 +120,11 @@ function createLeftColumn() {
                 <div class="row g-2">
                     <div class="col-6">
                         <label class="form-label">LSL:</label>
-                        <input type="text" class="form-control" id="lsl" placeholder="73.95">
+                        <input type="text" class="form-control" id="lsl" autocomplete="off">
                     </div>
                     <div class="col-6">
                         <label class="form-label">USL:</label>
-                        <input type="text" class="form-control" id="usl" placeholder="74.05">
+                        <input type="text" class="form-control" id="usl" autocomplete="off">
                     </div>
                 </div>
             </div>
@@ -138,11 +138,11 @@ function createLeftColumn() {
                 <div class="row g-2">
                     <div class="col-6">
                         <label class="form-label">Min Value:</label>
-                        <input type="text" class="form-control" id="minVal" placeholder="73.90">
+                        <input type="text" class="form-control" id="minVal" autocomplete="off">
                     </div>
                     <div class="col-6">
                         <label class="form-label">Max Value:</label>
-                        <input type="text" class="form-control" id="maxVal" placeholder="74.10">
+                        <input type="text" class="form-control" id="maxVal" autocomplete="off">
                     </div>
                 </div>
                 <div class="mt-2">
@@ -161,7 +161,7 @@ function createLeftColumn() {
                 <div class="row g-2 mb-2">
                     <div class="col-6">
                         <label class="form-label">Target Cpk:</label>
-                        <input type="text" class="form-control" id="targetCpk" placeholder="1.33">
+                        <input type="text" class="form-control" id="targetCpk" autocomplete="off">
                     </div>
                     <div class="col-6">
                         <label class="form-label">Decimals:</label>
@@ -178,7 +178,7 @@ function createLeftColumn() {
                 <div class="row g-2 mb-2">
                     <div class="col-6">
                         <label class="form-label">Sample Size:</label>
-                        <input type="text" class="form-control" id="sampleSize" placeholder="125">
+                        <input type="text" class="form-control" id="sampleSize" autocomplete="off">
                     </div>
                     <div class="col-6">
                         <label class="form-label">Subgroup Size:</label>
@@ -473,7 +473,7 @@ function createRightColumn() {
                     </div>
                     <div class="col-6">
                         <label class="form-label">Max Iterations:</label>
-                        <input type="text" class="form-control" id="maxIterations" placeholder="100">
+                        <input type="text" class="form-control" id="maxIterations" autocomplete="off">
                     </div>
                 </div>
 
@@ -487,7 +487,7 @@ function createRightColumn() {
                 <div class="row g-2 mb-3">
                     <div class="col-6">
                         <label class="form-label">Adjustment Factor:</label>
-                        <input type="text" class="form-control" id="adjFactor" placeholder="0.95">
+                        <input type="text" class="form-control" id="adjFactor" autocomplete="off">
                     </div>
                 </div>
 
@@ -586,7 +586,7 @@ function updateValuesTable(values, decimals) {
 
 function updateHistogram(values, lsl, usl, decimals, minVal, maxVal, forceRange) {
     const ctx = document.getElementById('histogramChart').getContext('2d');
-
+    
     if (histogramChart) {
         histogramChart.destroy();
     }
@@ -600,7 +600,6 @@ function updateHistogram(values, lsl, usl, decimals, minVal, maxVal, forceRange)
     const target = specType === 'bilateral' ? (lsl + usl) / 2 : meanVal;
 
     const binCount = Math.max(8, Math.min(20, Math.ceil(Math.log2(n)) + 1));
-    
     const dataMin = Math.min(...values);
     const dataMax = Math.max(...values);
     const range = dataMax - dataMin;
@@ -620,124 +619,110 @@ function updateHistogram(values, lsl, usl, decimals, minVal, maxVal, forceRange)
         return formatNumber(mid, Math.max(2, decimals));
     });
 
-    const curvePoints = 250;
-    const curveData = [];
-    
-    const curveRange = Math.max(range, 6 * stdDevOverall);
-    const curveMin = meanVal - curveRange * 0.6;
-    const curveMax = meanVal + curveRange * 0.6;
-    
     const maxBinHeight = Math.max(...bins);
     const maxPDF = normalPDF(meanVal, meanVal, stdDevOverall);
-    const scaleFactor = (maxBinHeight * 0.8) / maxPDF;
+    const curveScale = (maxBinHeight * 0.7) / maxPDF;
+
+    // Generate normal distribution curve
+    const curvePoints = 300;
+    const curveData = [];
+    const curveRange = Math.max(range, 6 * stdDevOverall);
+    const curveMin = meanVal - curveRange * 0.5;
+    const curveMax = meanVal + curveRange * 0.5;
     
-    // Create reference line dataset untuk USL line
-    const uslLineData = hasUsl && !isNaN(usl) ? labels.map(label => {
-        const val = parseFloat(label);
-        return val === usl ? maxBinHeight : null;
-    }) : Array(labels.length).fill(null);
-
-    // Create reference line dataset untuk LSL line
-    const lslLineData = hasLsl && !isNaN(lsl) ? labels.map(label => {
-        const val = parseFloat(label);
-        return val === lsl ? maxBinHeight : null;
-    }) : Array(labels.length).fill(null);
-
-    // Create normal distribution curve on secondary dataset
-    for (let i = 0; i <= curvePoints; i++) {
-        const x = curveMin + (i * (curveMax - curveMin) / curvePoints);
+    for (let i = 0; i < curvePoints; i++) {
+        const x = curveMin + (i / curvePoints) * (curveMax - curveMin);
         const pdf = normalPDF(x, meanVal, stdDevOverall);
-        curveData.push(pdf * scaleFactor);
+        curveData.push({x: x, y: pdf * curveScale});
     }
 
+    // Create datasets array
     const datasets = [
+        // Main histogram bars
         {
             label: 'Frequency',
             data: bins,
             backgroundColor: 'rgba(77, 171, 247, 0.7)',
             borderColor: 'rgba(77, 171, 247, 1)',
             borderWidth: 1,
-            barPercentage: 0.9,
+            barPercentage: 0.85,
             categoryPercentage: 0.9,
-            order: 3,
-            type: 'bar'
-        },
-        {
-            label: 'Normal Distribution',
-            data: curveData,
-            type: 'line',
-            borderColor: '#e74c3c',
-            borderWidth: 3,
-            backgroundColor: 'rgba(231, 76, 60, 0.05)',
-            fill: true,
-            pointRadius: 0,
-            tension: 0.4,
-            order: 1,
-            yAxisID: 'y'
+            yAxisID: 'y',
+            order: 10
         }
     ];
 
-    // Add reference lines
-    if (hasLsl && !isNaN(lsl)) {
-        datasets.push({
-            label: `LSL: ${formatNumber(lsl, decimals)}`,
-            data: labels.map(() => maxBinHeight * 0.95),
-            type: 'line',
-            borderColor: '#e74c3c',
-            borderWidth: 2.5,
-            borderDash: [8, 4],
-            pointRadius: 0,
-            fill: false,
-            tension: 0,
-            order: 2,
-            xAxisID: 'x'
-        });
-    }
-
-    if (hasUsl && !isNaN(usl)) {
-        datasets.push({
-            label: `USL: ${formatNumber(usl, decimals)}`,
-            data: labels.map(() => maxBinHeight * 0.90),
-            type: 'line',
-            borderColor: '#e74c3c',
-            borderWidth: 2.5,
-            borderDash: [8, 4],
-            pointRadius: 0,
-            fill: false,
-            tension: 0,
-            order: 2,
-            xAxisID: 'x'
-        });
-    }
-
-    if (specType === 'bilateral') {
-        datasets.push({
-            label: `Target: ${formatNumber(target, decimals)}`,
-            data: labels.map(() => maxBinHeight * 0.85),
-            type: 'line',
-            borderColor: '#f39c12',
-            borderWidth: 2,
-            borderDash: [6, 3],
-            pointRadius: 0,
-            fill: false,
-            tension: 0,
-            order: 2,
-            xAxisID: 'x'
-        });
-    }
-
+    // Add normal distribution curve
     datasets.push({
-        label: `Mean: ${formatNumber(meanVal, decimals)}`,
-        data: labels.map(() => maxBinHeight * 0.80),
-        type: 'line',
-        borderColor: '#20c997',
-        borderWidth: 2.5,
-        borderDash: [5, 5],
-        pointRadius: 0,
+        label: 'Normal Distribution',
+        type: 'scatter',
+        data: curveData,
+        showLine: true,
+        borderColor: '#e74c3c',
+        borderWidth: 3,
+        backgroundColor: 'rgba(231, 76, 60, 0.1)',
         fill: false,
-        tension: 0,
-        order: 2,
-        xAxisID: 'x'
+        pointRadius: 0,
+        tension: 0.4,
+        spanGaps: true,
+        yAxisID: 'y'
+    });
+
+    // Add vertical reference lines
+    const lineConfigs = [];
+    
+    if (hasLsl && !isNaN(lsl)) {
+        lineConfigs.push({
+            x: lsl,
+            label: `LSL: ${formatNumber(lsl, decimals)}`,
+            color: '#e74c3c',
+            dash: [8, 4]
+        });
+    }
+    
+    if (hasUsl && !isNaN(usl)) {
+        lineConfigs.push({
+            x: usl,
+            label: `USL: ${formatNumber(usl, decimals)}`,
+            color: '#e74c3c',
+            dash: [8, 4]
+        });
+    }
+    
+    if (specType === 'bilateral') {
+        lineConfigs.push({
+            x: target,
+            label: `Target: ${formatNumber(target, decimals)}`,
+            color: '#f39c12',
+            dash: [6, 3]
+        });
+    }
+    
+    lineConfigs.push({
+        x: meanVal,
+        label: `Mean: ${formatNumber(meanVal, decimals)}`,
+        color: '#20c997',
+        dash: [5, 5]
+    });
+
+    // Add line datasets
+    lineConfigs.forEach(lineConfig => {
+        datasets.push({
+            label: lineConfig.label,
+            type: 'line',
+            borderColor: lineConfig.color,
+            borderWidth: 2.5,
+            borderDash: lineConfig.dash,
+            data: [
+                {x: lineConfig.x, y: 0},
+                {x: lineConfig.x, y: maxBinHeight * 1.05}
+            ],
+            pointRadius: 0,
+            fill: false,
+            tension: 0,
+            yAxisID: 'y',
+            tooltip: {enabled: false}
+        });
     });
 
     histogramChart = new Chart(ctx, {
@@ -757,60 +742,78 @@ function updateHistogram(values, lsl, usl, decimals, minVal, maxVal, forceRange)
                 legend: {
                     display: true,
                     position: 'top',
-                    maxHeight: 50,
+                    maxHeight: 60,
                     labels: {
-                        font: { size: 11, weight: 'bold' },
+                        font: { size: 10, weight: 'bold' },
                         usePointStyle: true,
-                        padding: 15
+                        padding: 12,
+                        generateLabels: function(chart) {
+                            return chart.data.datasets.map((ds, i) => ({
+                                text: ds.label,
+                                fillStyle: ds.borderColor || ds.backgroundColor,
+                                strokeStyle: ds.borderColor,
+                                hidden: false,
+                                index: i
+                            }));
+                        }
                     }
                 },
                 tooltip: {
+                    enabled: true,
                     backgroundColor: 'rgba(0,0,0,0.85)',
                     titleColor: '#fff',
                     bodyColor: '#fff',
                     borderColor: 'rgba(255,255,255,0.2)',
                     borderWidth: 1,
-                    padding: 10,
                     titleFont: { size: 12, weight: 'bold' },
                     bodyFont: { size: 11 },
+                    padding: 10,
                     callbacks: {
-                        title: function(tooltipItems) {
-                            const idx = tooltipItems[0].dataIndex;
+                        title: function(context) {
+                            if (context[0].dataset.type === 'scatter' || context[0].dataset.type === 'line') {
+                                return context[0].dataset.label;
+                            }
+                            const idx = context[0].dataIndex;
                             const lower = binEdges[idx];
                             const upper = binEdges[idx + 1];
                             return `Range: ${formatNumber(lower, decimals)} - ${formatNumber(upper, decimals)}`;
                         },
                         label: function(context) {
-                            if (context.dataset.type === 'bar' || !context.dataset.type) {
-                                const value = context.parsed.y;
-                                const percentage = ((value / n) * 100).toFixed(1);
-                                return `${context.dataset.label}: ${value} (${percentage}%)`;
+                            const ds = context.dataset;
+                            if (ds.type === 'line' && Array.isArray(ds.data)) {
+                                return ds.label || '';
                             }
-                            return context.dataset.label;
+                            if (ds.type && ds.type !== 'bar') {
+                                return '';
+                            }
+                            const value = context.parsed.y;
+                            const pct = ((value / n) * 100).toFixed(1);
+                            return `Count: ${value} (${pct}%)`;
                         }
                     }
                 }
             },
             scales: {
                 x: {
+                    type: 'linear',
+                    min: dataMin - binWidth * 0.5,
+                    max: dataMax + binWidth * 0.5,
                     title: {
                         display: true,
                         text: 'Measured Value',
-                        font: { weight: 'bold', size: 13 }
+                        font: { weight: 'bold', size: 12 }
                     },
-                    grid: { color: 'rgba(0,0,0,0.05)' },
-                    ticks: { font: { size: 10 } }
+                    grid: { color: 'rgba(0,0,0,0.05)' }
                 },
                 y: {
                     beginAtZero: true,
                     title: {
                         display: true,
                         text: 'Frequency',
-                        font: { weight: 'bold', size: 13 }
+                        font: { weight: 'bold', size: 12 }
                     },
                     grid: { color: 'rgba(0,0,0,0.05)' },
-                    ticks: { font: { size: 10 } },
-                    suggestedMax: Math.max(...bins) * 1.15
+                    suggestedMax: maxBinHeight * 1.1
                 }
             }
         }
