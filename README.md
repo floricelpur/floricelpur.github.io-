@@ -1,4 +1,4 @@
-# 📊 Capability Generator PRO
+# 📊 Capability PRO
 
 ![Version](https://img.shields.io/badge/version-1.0.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
@@ -18,7 +18,7 @@ A professional web-based tool for generating process data with specific capabili
 
 ## 🚀 Live Demo
 
-Access the live application: **[Capability Generator PRO on GitHub Pages](https://username.github.io/cpk-generator-pro/)**
+Access the live application: **[Capability PRO on GitHub Pages](https://username.github.io/cpk-generator-pro/)**
 
 ## 📋 Prerequisites
 
