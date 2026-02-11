@@ -1,0 +1,1000 @@
+// ========== STATISTICS INFORMATION ==========
+const statInfo = {
+    "LSL": {
+        title: "Lower Specification Limit",
+        explanation: "The minimum acceptable value for the process. Values below LSL are considered non-conforming.",
+        formula: "LSL = Minimum acceptable value"
+    },
+    "USL": {
+        title: "Upper Specification Limit",
+        explanation: "The maximum acceptable value for the process. Values above USL are considered non-conforming.",
+        formula: "USL = Maximum acceptable value"
+    },
+    "Target": {
+        title: "Target Value",
+        explanation: "The desired process mean, typically the midpoint between LSL and USL.",
+        formula: "Target = (LSL + USL) / 2"
+    },
+    "Mean": {
+        title: "Sample Mean",
+        explanation: "The arithmetic average of all generated values. Calculated as sum of values divided by count.",
+        formula: "Mean = (Σxᵢ) / n"
+    },
+    "Sample N": {
+        title: "Sample Size",
+        explanation: "Number of data points in the sample. Larger samples provide more reliable statistics.",
+        formula: "n = Count(values)"
+    },
+    "Mean to Target": {
+        title: "Mean to Target",
+        explanation: "Difference between actual mean and target value. Measures process centering.",
+        formula: "Mean to Target = Mean - Target"
+    },
+    "StdDev(Overall)": {
+        title: "Overall Standard Deviation",
+        explanation: "Standard deviation of all data points (long-term variation). Includes all sources of variation.",
+        formula: "σ_overall = √[Σ(xᵢ - μ)² / (n-1)]"
+    },
+    "StdDev(Within)": {
+        title: "Within Subgroup Standard Deviation",
+        explanation: "Standard deviation within subgroups (short-term variation). Represents inherent process capability.",
+        formula: "For subgroup size > 1: Uses pooled standard deviation<br>For subgroup size = 1: Uses average moving range"
+    },
+    "Cp": {
+        title: "Process Capability",
+        explanation: "Measures potential capability if process is centered. Does not consider process centering.",
+        formula: "Cp = (USL - LSL) / (6σ_within)"
+    },
+    "Cpk": {
+        title: "Process Capability Index",
+        explanation: "Measures actual capability considering centering. Always ≤ Cp.",
+        formula: "Cpk = min[(USL - μ)/(3σ_within), (μ - LSL)/(3σ_within)]"
+    },
+    "Pp": {
+        title: "Process Performance",
+        explanation: "Similar to Cp but uses overall standard deviation. Measures long-term performance.",
+        formula: "Pp = (USL - LSL) / (6σ_overall)"
+    },
+    "PpK": {
+        title: "Process Performance Index",
+        explanation: "Similar to Cpk but uses overall standard deviation. Measures long-term performance considering centering.",
+        formula: "Ppk = min[(USL - μ)/(3σ_overall), (μ - LSL)/(3σ_overall)]"
+    },
+    "Cpu": {
+        title: "Upper Process Capability",
+        explanation: "Capability relative to USL only. Used when only upper specification is relevant.",
+        formula: "Cpu = (USL - μ) / (3σ_within)"
+    },
+    "Cpl": {
+        title: "Lower Process Capability",
+        explanation: "Capability relative to LSL only. Used when only lower specification is relevant.",
+        formula: "Cpl = (μ - LSL) / (3σ_within)"
+    },
+    "K (Shift)": {
+        title: "Process Shift",
+        explanation: "How far the mean is from target (as % of tolerance). Measures process centering.",
+        formula: "K = |μ - Target| / [(USL - LSL)/2] × 100%"
+    },
+    "Cr (1/Cp)": {
+        title: "Capability Ratio",
+        explanation: "Inverse of Cp (smaller is better). Represents proportion of specification width used.",
+        formula: "Cr = 1 / Cp"
+    }
+};
+
+// ========== UI INITIALIZATION ==========
+function initializeUI() {
+    createLeftColumn();
+    createCenterColumn();
+    createRightColumn();
+}
+
+function createLeftColumn() {
+    const leftColumn = document.getElementById('left-column');
+    
+    leftColumn.innerHTML = `
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-sliders-h"></i> Specification Type
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Type:</label>
+                    <select class="form-select" id="specType">
+                        <option value="bilateral">Bilateral (LSL and USL)</option>
+                        <option value="unilateral_lsl">Unilateral LSL only</option>
+                        <option value="unilateral_usl">Unilateral USL only</option>
+                    </select>
+                </div>
+                <button class="btn btn-outline-info btn-sm w-100" onclick="showSpecTypeInfo()">
+                    <i class="fas fa-info-circle"></i> What is Specification Type?
+                </button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-ruler-combined"></i> Specification Limits
+            </div>
+            <div class="card-body">
+                <div class="row g-2">
+                    <div class="col-6">
+                        <label class="form-label">LSL:</label>
+                        <input type="text" class="form-control" id="lsl" placeholder="73.95" value="73.95">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label">USL:</label>
+                        <input type="text" class="form-control" id="usl" placeholder="74.05" value="74.05">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-expand-alt"></i> Value Range Limits
+            </div>
+            <div class="card-body">
+                <div class="row g-2">
+                    <div class="col-6">
+                        <label class="form-label">Min Value:</label>
+                        <input type="text" class="form-control" id="minVal" placeholder="73.90" value="73.90">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label">Max Value:</label>
+                        <input type="text" class="form-control" id="maxVal" placeholder="74.10" value="74.10">
+                    </div>
+                </div>
+                <div class="mt-2">
+                    <small id="rangeInfo" class="highlight-red">
+                        <i class="fas fa-lock"></i> Values STRICTLY between Min and Max
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-cog"></i> Setup Parameters
+            </div>
+            <div class="card-body">
+                <div class="row g-2 mb-2">
+                    <div class="col-6">
+                        <label class="form-label">Target Cpk:</label>
+                        <input type="text" class="form-control" id="targetCpk" value="1.33">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label">Decimals:</label>
+                        <select class="form-select" id="decimals">
+                            <option>1</option>
+                            <option>2</option>
+                            <option selected>3</option>
+                            <option>4</option>
+                            <option>5</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="row g-2 mb-2">
+                    <div class="col-6">
+                        <label class="form-label">Sample Size:</label>
+                        <input type="text" class="form-control" id="sampleSize" value="125">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label">Subgroup Size:</label>
+                        <select class="form-select" id="subgroupSize">
+                            <option>1</option>
+                            <option>2</option>
+                            <option>3</option>
+                            <option>4</option>
+                            <option selected>5</option>
+                            <option>6</option>
+                            <option>7</option>
+                            <option>8</option>
+                            <option>9</option>
+                            <option>10</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="slider-container mb-2">
+                    <span class="slider-label">Sigma %:</span>
+                    <input type="range" class="form-range" id="sigmaSlider" min="5" max="80" value="20">
+                    <span id="sigmaValue" class="badge bg-secondary">20%</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <div class="progress">
+                    <div id="progressBar" class="progress-bar" style="width: 0%">0%</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button class="btn btn-success btn-lg" id="generateBtn" onclick="generateValues()">
+                        <i class="fas fa-rocket"></i> GENERATE VALUES
+                    </button>
+                    <button class="btn btn-danger btn-lg" id="stopBtn" onclick="stopGeneration()" disabled>
+                        <i class="fas fa-stop"></i> STOP
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function createCenterColumn() {
+    const centerColumn = document.getElementById('center-column');
+    
+    centerColumn.innerHTML = `
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-chart-bar"></i> Process Capability Statistics
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <div class="section-title">Process Data</div>
+                    </div>
+                </div>
+
+                <div class="row mb-2">
+                    <div class="col-6">
+                        <div class="d-flex align-items-center mb-2">
+                            <span class="stat-label">LSL</span>
+                            <button class="info-btn" onclick="showStatInfo('LSL')">ℹ</button>
+                        </div>
+                        <div class="stat-card" id="lslValue">N/A</div>
+                    </div>
+                    <div class="col-6">
+                        <div class="d-flex align-items-center mb-2">
+                            <span class="stat-label">USL</span>
+                            <button class="info-btn" onclick="showStatInfo('USL')">ℹ</button>
+                        </div>
+                        <div class="stat-card" id="uslValue">N/A</div>
+                    </div>
+                </div>
+
+                <div class="row mb-2">
+                    <div class="col-6">
+                        <div class="d-flex align-items-center mb-2">
+                            <span class="stat-label">Target</span>
+                            <button class="info-btn" onclick="showStatInfo('Target')">ℹ</button>
+                        </div>
+                        <div class="stat-card" id="targetValue">N/A</div>
+                    </div>
+                    <div class="col-6">
+                        <div class="d-flex align-items-center mb-2">
+                            <span class="stat-label">Sample Mean</span>
+                            <button class="info-btn" onclick="showStatInfo('Mean')">ℹ</button>
+                        </div>
+                        <div class="stat-card" id="meanValue">N/A</div>
+                    </div>
+                </div>
+
+                <div class="row mb-2">
+                    <div class="col-6">
+                        <div class="d-flex align-items-center mb-2">
+                            <span class="stat-label">Sample N</span>
+                            <button class="info-btn" onclick="showStatInfo('Sample N')">ℹ</button>
+                        </div>
+                        <div class="stat-card" id="nValue">N/A</div>
+                    </div>
+                    <div class="col-6">
+                        <div class="d-flex align-items-center mb-2">
+                            <span class="stat-label">Mean to Target</span>
+                            <button class="info-btn" onclick="showStatInfo('Mean to Target')">ℹ</button>
+                        </div>
+                        <div class="stat-card" id="meanToTargetValue">N/A</div>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-6">
+                        <div class="d-flex align-items-center mb-2">
+                            <span class="stat-label">StdDev(Overall)</span>
+                            <button class="info-btn" onclick="showStatInfo('StdDev(Overall)')">ℹ</button>
+                        </div>
+                        <div class="stat-card" id="stdOverallValue">N/A</div>
+                    </div>
+                    <div class="col-6">
+                        <div class="d-flex align-items-center mb-2">
+                            <span class="stat-label">StdDev(Within)</span>
+                            <button class="info-btn" onclick="showStatInfo('StdDev(Within)')">ℹ</button>
+                        </div>
+                        <div class="stat-card" id="stdWithinValue">N/A</div>
+                    </div>
+                </div>
+
+                <hr>
+
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <div class="section-title">Capability Indices</div>
+                    </div>
+                </div>
+
+                <div class="row mb-2">
+                    <div class="col-6">
+                        <div class="d-flex align-items-center mb-2">
+                            <span class="stat-label">Cp</span>
+                            <button class="info-btn" onclick="showStatInfo('Cp')">ℹ</button>
+                        </div>
+                        <div class="stat-card" id="cpValue">N/A</div>
+                    </div>
+                    <div class="col-6">
+                        <div class="d-flex align-items-center mb-2">
+                            <span class="stat-label">Cpk</span>
+                            <button class="info-btn" onclick="showStatInfo('Cpk')">ℹ</button>
+                        </div>
+                        <div class="stat-card" id="cpkValue">N/A</div>
+                    </div>
+                </div>
+
+                <div class="row mb-2">
+                    <div class="col-6">
+                        <div class="d-flex align-items-center mb-2">
+                            <span class="stat-label">Pp</span>
+                            <button class="info-btn" onclick="showStatInfo('Pp')">ℹ</button>
+                        </div>
+                        <div class="stat-card" id="ppValue">N/A</div>
+                    </div>
+                    <div class="col-6">
+                        <div class="d-flex align-items-center mb-2">
+                            <span class="stat-label">PpK</span>
+                            <button class="info-btn" onclick="showStatInfo('PpK')">ℹ</button>
+                        </div>
+                        <div class="stat-card" id="ppkValue">N/A</div>
+                    </div>
+                </div>
+
+                <div class="row mb-2">
+                    <div class="col-6">
+                        <div class="d-flex align-items-center mb-2">
+                            <span class="stat-label">Cpu</span>
+                            <button class="info-btn" onclick="showStatInfo('Cpu')">ℹ</button>
+                        </div>
+                        <div class="stat-card" id="cpuValue">N/A</div>
+                    </div>
+                    <div class="col-6">
+                        <div class="d-flex align-items-center mb-2">
+                            <span class="stat-label">Cpl</span>
+                            <button class="info-btn" onclick="showStatInfo('Cpl')">ℹ</button>
+                        </div>
+                        <div class="stat-card" id="cplValue">N/A</div>
+                    </div>
+                </div>
+
+                <div class="row mb-2">
+                    <div class="col-6">
+                        <div class="d-flex align-items-center mb-2">
+                            <span class="stat-label">K (Shift)</span>
+                            <button class="info-btn" onclick="showStatInfo('K (Shift)')">ℹ</button>
+                        </div>
+                        <div class="stat-card" id="kValue">N/A</div>
+                    </div>
+                    <div class="col-6">
+                        <div class="d-flex align-items-center mb-2">
+                            <span class="stat-label">Cr (1/Cp)</span>
+                            <button class="info-btn" onclick="showStatInfo('Cr (1/Cp)')">ℹ</button>
+                        </div>
+                        <div class="stat-card" id="crValue">N/A</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-table"></i> Generated Values (click to copy)
+            </div>
+            <div class="card-body">
+                <div style="max-height: 400px; overflow-y: auto;">
+                    <table class="table table-striped table-hover" id="valuesTable">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Value</th>
+                            </tr>
+                        </thead>
+                        <tbody id="valuesTableBody"></tbody>
+                    </table>
+                </div>
+                <div class="mt-3 d-flex gap-2">
+                    <button class="btn btn-primary btn-sm" onclick="copyAllValues()">
+                        <i class="fas fa-copy"></i> Copy All
+                    </button>
+                    <button class="btn btn-secondary btn-sm" onclick="clearTable()">
+                        <i class="fas fa-trash"></i> Clear
+                    </button>
+                    <button class="btn btn-success btn-sm" onclick="exportToCSV()">
+                        <i class="fas fa-file-export"></i> Export CSV
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function createRightColumn() {
+    const rightColumn = document.getElementById('right-column');
+    
+    rightColumn.innerHTML = `
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-chart-histogram"></i> Distribution Histogram</span>
+                <button class="btn btn-sm btn-outline-light" onclick="toggleHistogramFullscreen()" title="Toggle fullscreen">
+                    <i class="fas fa-expand"></i>
+                </button>
+            </div>
+            <div class="card-body">
+                <div id="histogram-container" style="height: 450px; position: relative;">
+                    <canvas id="histogramChart"></canvas>
+                </div>
+                <div class="mt-2 text-center">
+                    <small class="text-muted">
+                        <span class="badge bg-success me-1">—</span> Mean &nbsp;&nbsp;
+                        <span class="badge bg-danger me-1">—</span> LSL/USL &nbsp;&nbsp;
+                        <span class="badge bg-warning me-1">—</span> Target &nbsp;&nbsp;
+                        <span class="badge bg-primary me-1">▇</span> Data &nbsp;&nbsp;
+                        <span class="badge bg-danger me-1">—</span> Normal Curve
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-tools"></i> Advanced Controls
+            </div>
+            <div class="card-body">
+                <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" id="forceRange" checked>
+                    <label class="form-check-label" for="forceRange">
+                        <i class="fas fa-lock"></i> Force values strictly between Min and Max
+                    </label>
+                </div>
+
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <label class="form-label">Cpk Tolerance:</label>
+                        <select class="form-select" id="tolerance">
+                            <option>0.001</option>
+                            <option>0.005</option>
+                            <option selected>0.01</option>
+                            <option>0.05</option>
+                            <option>0.1</option>
+                        </select>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label">Max Iterations:</label>
+                        <input type="text" class="form-control" id="maxIterations" value="100">
+                    </div>
+                </div>
+
+                <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" id="autoAdjust" checked>
+                    <label class="form-check-label" for="autoAdjust">
+                        Auto-adjust to achieve target Cpk
+                    </label>
+                </div>
+
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <label class="form-label">Adjustment Factor:</label>
+                        <input type="text" class="form-control" id="adjFactor" value="0.95">
+                    </div>
+                </div>
+
+                <div class="slider-container mb-3">
+                    <span class="slider-label">Distribution Center:</span>
+                    <input type="range" class="form-range" id="centerSlider" min="0" max="100" value="50">
+                    <span id="centerValue" class="badge bg-secondary">50% (Middle)</span>
+                </div>
+
+                <div class="status-box" id="statusDisplay">
+                    <i class="fas fa-check-circle"></i> Ready to generate values
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// ========== UI EVENT HANDLERS ==========
+function setupEventListeners() {
+    document.addEventListener('input', function(e) {
+        if (e.target.id === 'sigmaSlider') {
+            document.getElementById('sigmaValue').textContent = e.target.value + '%';
+        } else if (e.target.id === 'centerSlider') {
+            const value = parseInt(e.target.value);
+            let label = value + '%';
+            if (value === 50) label += ' (Middle)';
+            else if (value < 50) label += ' (Left)';
+            else label += ' (Right)';
+            document.getElementById('centerValue').textContent = label;
+        }
+    });
+
+    document.addEventListener('change', function(e) {
+        if (e.target.id === 'forceRange') {
+            const rangeInfo = document.getElementById('rangeInfo');
+            if (e.target.checked) {
+                rangeInfo.innerHTML = '<i class="fas fa-lock"></i> Values STRICTLY between Min and Max';
+                rangeInfo.className = 'highlight-red';
+            } else {
+                rangeInfo.innerHTML = '<i class="fas fa-unlock"></i> Values can be outside Min-Max';
+                rangeInfo.className = 'highlight-green';
+            }
+        } else if (e.target.id === 'specType') {
+            updateSpecTypeUI();
+        }
+    });
+}
+
+function updateSpecTypeUI() {
+    const specType = document.getElementById('specType').value;
+    const lslInput = document.getElementById('lsl');
+    const uslInput = document.getElementById('usl');
+
+    if (specType === 'bilateral') {
+        lslInput.disabled = false;
+        uslInput.disabled = false;
+        lslInput.style.backgroundColor = '';
+        uslInput.style.backgroundColor = '';
+    } else if (specType === 'unilateral_lsl') {
+        lslInput.disabled = false;
+        uslInput.disabled = true;
+        uslInput.value = '';
+        lslInput.style.backgroundColor = '#e8f4fd';
+        uslInput.style.backgroundColor = '#f8f9fa';
+    } else if (specType === 'unilateral_usl') {
+        lslInput.disabled = true;
+        uslInput.disabled = false;
+        lslInput.value = '';
+        lslInput.style.backgroundColor = '#f8f9fa';
+        uslInput.style.backgroundColor = '#e8f4fd';
+    }
+}
+
+function updateValuesTable(values, decimals) {
+    const tbody = document.getElementById('valuesTableBody');
+    if (!tbody) return;
+    
+    tbody.innerHTML = '';
+
+    values.forEach((value, index) => {
+        const row = document.createElement('tr');
+        const indexCell = document.createElement('td');
+        const valueCell = document.createElement('td');
+
+        indexCell.textContent = index + 1;
+        valueCell.textContent = formatNumber(value, decimals);
+        valueCell.style.cursor = 'pointer';
+        valueCell.title = 'Click to copy';
+        valueCell.onclick = () => copyToClipboard(valueCell.textContent);
+
+        row.appendChild(indexCell);
+        row.appendChild(valueCell);
+        tbody.appendChild(row);
+    });
+}
+
+function updateHistogram(values, lsl, usl, decimals, minVal, maxVal, forceRange) {
+    const ctx = document.getElementById('histogramChart').getContext('2d');
+
+    if (histogramChart) {
+        histogramChart.destroy();
+    }
+
+    const n = values.length;
+    const meanVal = values.reduce((a, b) => a + b, 0) / n;
+    const [stdDevOverall, stdDevWithin] = calculateBothStandardDeviations(values, 5);
+    const specType = getInputValue('specType');
+    const hasLsl = specType !== 'unilateral_usl';
+    const hasUsl = specType !== 'unilateral_lsl';
+    const target = specType === 'bilateral' ? (lsl + usl) / 2 : meanVal;
+
+    const binCount = Math.max(8, Math.min(20, Math.ceil(Math.log2(n)) + 1));
+    
+    const dataMin = Math.min(...values);
+    const dataMax = Math.max(...values);
+    const range = dataMax - dataMin;
+    const binWidth = range / binCount;
+    
+    const bins = Array(binCount).fill(0);
+    const binEdges = Array(binCount + 1).fill(0).map((_, i) => dataMin + i * binWidth);
+    
+    values.forEach(value => {
+        let binIndex = Math.floor((value - dataMin) / binWidth);
+        if (binIndex === binCount) binIndex = binCount - 1;
+        bins[binIndex]++;
+    });
+
+    const labels = binEdges.slice(0, -1).map((edge, i) => {
+        const mid = edge + binWidth / 2;
+        return formatNumber(mid, Math.max(2, decimals));
+    });
+
+    const curvePoints = 200;
+    const curveData = [];
+    const curveLabels = [];
+    
+    const curveRange = Math.max(range, 6 * stdDevOverall);
+    const curveMin = meanVal - curveRange * 0.6;
+    const curveMax = meanVal + curveRange * 0.6;
+    
+    const maxBinHeight = Math.max(...bins);
+    const maxPDF = normalPDF(meanVal, meanVal, stdDevOverall);
+    const scaleFactor = (maxBinHeight * 0.8) / maxPDF;
+    
+    for (let i = 0; i <= curvePoints; i++) {
+        const x = curveMin + (i * (curveMax - curveMin) / curvePoints);
+        const pdf = normalPDF(x, meanVal, stdDevOverall);
+        curveData.push(pdf * scaleFactor);
+        curveLabels.push(x);
+    }
+
+    histogramChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Frequency',
+                    data: bins,
+                    backgroundColor: 'rgba(77, 171, 247, 0.7)',
+                    borderColor: 'rgba(77, 171, 247, 1)',
+                    borderWidth: 1,
+                    barPercentage: 0.9,
+                    categoryPercentage: 0.9,
+                    order: 3
+                },
+                {
+                    label: 'Normal Distribution',
+                    data: curveData,
+                    type: 'line',
+                    borderColor: '#e74c3c',
+                    borderWidth: 3,
+                    backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                    fill: false,
+                    pointRadius: 0,
+                    tension: 0.3,
+                    order: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top',
+                    labels: {
+                        font: { size: 12, weight: 'bold' },
+                        usePointStyle: true,
+                        pointStyle: 'circle'
+                    }
+                },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                    backgroundColor: 'rgba(0,0,0,0.8)',
+                    titleColor: '#fff',
+                    bodyColor: '#fff',
+                    callbacks: {
+                        title: function(tooltipItems) {
+                            if (tooltipItems[0].datasetIndex === 0) {
+                                const index = tooltipItems[0].dataIndex;
+                                const lower = binEdges[index];
+                                const upper = binEdges[index + 1];
+                                return `Bin: ${formatNumber(lower, decimals)} - ${formatNumber(upper, decimals)}`;
+                            }
+                            return 'Normal Distribution';
+                        },
+                        label: function(context) {
+                            if (context.datasetIndex === 0) {
+                                const value = context.parsed.y;
+                                const percentage = ((value / n) * 100).toFixed(1);
+                                return `Count: ${value} (${percentage}%)`;
+                            } else {
+                                const x = curveLabels[context.dataIndex];
+                                const pdf = normalPDF(x, meanVal, stdDevOverall);
+                                return `PDF: ${pdf.toFixed(6)}`;
+                            }
+                        }
+                    }
+                },
+                annotation: {
+                    annotations: {}
+                }
+            },
+            scales: {
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Value',
+                        font: { weight: 'bold', size: 12, family: 'Segoe UI' }
+                    },
+                    grid: { color: 'rgba(0,0,0,0.05)' },
+                    ticks: { font: { size: 11 } }
+                },
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Frequency',
+                        font: { weight: 'bold', size: 12, family: 'Segoe UI' }
+                    },
+                    grid: { color: 'rgba(0,0,0,0.05)' },
+                    ticks: { font: { size: 11 } },
+                    suggestedMax: Math.max(...bins) * 1.2
+                }
+            }
+        }
+    });
+
+    const annotations = histogramChart.options.plugins.annotation.annotations;
+
+    annotations.meanLine = {
+        type: 'line',
+        xMin: meanVal,
+        xMax: meanVal,
+        borderColor: '#20c997',
+        borderWidth: 3,
+        borderDash: [6, 6],
+        label: {
+            display: true,
+            content: `Mean: ${formatNumber(meanVal, decimals)}`,
+            position: 'end',
+            backgroundColor: '#20c997',
+            color: 'white',
+            font: { size: 11, weight: 'bold' },
+            padding: 6,
+            borderRadius: 4
+        }
+    };
+
+    if (hasLsl && !isNaN(lsl)) {
+        annotations.lslLine = {
+            type: 'line',
+            xMin: lsl,
+            xMax: lsl,
+            borderColor: '#e74c3c',
+            borderWidth: 2,
+            borderDash: [5, 5],
+            label: {
+                display: true,
+                content: `LSL: ${formatNumber(lsl, decimals)}`,
+                position: 'end',
+                backgroundColor: '#e74c3c',
+                color: 'white',
+                font: { size: 11, weight: 'bold' },
+                padding: 6,
+                borderRadius: 4
+            }
+        };
+    }
+
+    if (hasUsl && !isNaN(usl)) {
+        annotations.uslLine = {
+            type: 'line',
+            xMin: usl,
+            xMax: usl,
+            borderColor: '#e74c3c',
+            borderWidth: 2,
+            borderDash: [5, 5],
+            label: {
+                display: true,
+                content: `USL: ${formatNumber(usl, decimals)}`,
+                position: 'end',
+                backgroundColor: '#e74c3c',
+                color: 'white',
+                font: { size: 11, weight: 'bold' },
+                padding: 6,
+                borderRadius: 4
+            }
+        };
+    }
+
+    if (specType === 'bilateral' && !isNaN(lsl) && !isNaN(usl)) {
+        annotations.targetLine = {
+            type: 'line',
+            xMin: target,
+            xMax: target,
+            borderColor: '#f39c12',
+            borderWidth: 2,
+            borderDash: [4, 4],
+            label: {
+                display: true,
+                content: `Target: ${formatNumber(target, decimals)}`,
+                position: 'start',
+                backgroundColor: '#f39c12',
+                color: 'white',
+                font: { size: 11, weight: 'bold' },
+                padding: 6,
+                borderRadius: 4
+            }
+        };
+    }
+
+    if (forceRange) {
+        annotations.minRangeLine = {
+            type: 'line',
+            xMin: minVal,
+            xMax: minVal,
+            borderColor: '#6c757d',
+            borderWidth: 1,
+            borderDash: [3, 3],
+            label: {
+                display: true,
+                content: `Min: ${formatNumber(minVal, decimals)}`,
+                position: 'start',
+                backgroundColor: '#6c757d',
+                color: 'white',
+                font: { size: 10 },
+                padding: 4,
+                borderRadius: 3
+            }
+        };
+
+        annotations.maxRangeLine = {
+            type: 'line',
+            xMin: maxVal,
+            xMax: maxVal,
+            borderColor: '#6c757d',
+            borderWidth: 1,
+            borderDash: [3, 3],
+            label: {
+                display: true,
+                content: `Max: ${formatNumber(maxVal, decimals)}`,
+                position: 'end',
+                backgroundColor: '#6c757d',
+                color: 'white',
+                font: { size: 10 },
+                padding: 4,
+                borderRadius: 3
+            }
+        };
+    }
+
+    histogramChart.update();
+}
+
+// ========== MODAL FUNCTIONS ==========
+function showStatInfo(statName) {
+    const info = statInfo[statName];
+    if (!info) return;
+
+    document.getElementById('infoModalTitle').textContent = `📊 Information: ${statName}`;
+    document.getElementById('infoModalBody').innerHTML = `
+        <div style="padding: 20px;">
+            <h5 style="color: #667eea;">${info.title}</h5>
+            <p style="font-size: 14px; line-height: 1.6;">${info.explanation}</p>
+            ${info.formula ? `<hr><p><strong>Formula:</strong><br><code style="background: #f8f9fa; padding: 8px; border-radius: 4px; display: block;">${info.formula}</code></p>` : ''}
+        </div>
+    `;
+
+    const modal = new bootstrap.Modal(document.getElementById('infoModal'));
+    modal.show();
+}
+
+function showSpecTypeInfo() {
+    document.getElementById('infoModalTitle').textContent = 'ℹ️ Specification Types Information';
+    document.getElementById('infoModalBody').innerHTML = `
+        <div style="padding: 20px;">
+            <h5 style="color: #667eea;">Specification Types:</h5>
+            <p><strong>Bilateral (LSL and USL)</strong>: Both lower and upper specification limits are defined.<br>
+            • Example: Diameter must be between 10.0 and 10.2 mm</p>
+            <p><strong>Unilateral LSL only</strong>: Only lower specification limit is defined.<br>
+            • Example: Strength must be at least 100 MPa (no upper limit)</p>
+            <p><strong>Unilateral USL only</strong>: Only upper specification limit is defined.<br>
+            • Example: Impurity must be no more than 0.5% (no lower limit)</p>
+            <p><i>Select the type that matches your process requirements.</i></p>
+        </div>
+    `;
+
+    const modal = new bootstrap.Modal(document.getElementById('infoModal'));
+    modal.show();
+}
+
+// ========== FULLSCREEN FUNCTIONS ==========
+function toggleHistogramFullscreen() {
+    const container = document.getElementById('histogram-container');
+    const card = container.closest('.card');
+    
+    if (!document.fullscreenElement) {
+        if (card.requestFullscreen) {
+            card.requestFullscreen();
+        } else if (card.webkitRequestFullscreen) {
+            card.webkitRequestFullscreen();
+        } else if (card.msRequestFullscreen) {
+            card.msRequestFullscreen();
+        }
+        
+        setTimeout(() => {
+            container.style.height = '80vh';
+            if (histogramChart) {
+                histogramChart.resize();
+            }
+        }, 100);
+    } else {
+        if (document.exitFullscreen) {
+            document.exitFullscreen();
+        } else if (document.webkitExitFullscreen) {
+            document.webkitExitFullscreen();
+        } else if (document.msExitFullscreen) {
+            document.msExitFullscreen();
+        }
+        
+        container.style.height = '450px';
+        if (histogramChart) {
+            setTimeout(() => histogramChart.resize(), 100);
+        }
+    }
+}
+
+function handleFullscreenChange() {
+    const container = document.getElementById('histogram-container');
+    if (!document.fullscreenElement && 
+        !document.webkitFullscreenElement && 
+        !document.msFullscreenElement) {
+        container.style.height = '450px';
+        if (histogramChart) {
+            setTimeout(() => histogramChart.resize(), 100);
+        }
+    }
+}
+
+// ========== TABLE FUNCTIONS ==========
+function copyAllValues() {
+    if (generatedValues.length === 0) {
+        alert('No values to copy. Generate values first.');
+        return;
+    }
+
+    const decimals = parseInt(getInputValue('decimals'));
+    const valuesStr = generatedValues.map(v => formatNumber(v, decimals)).join('\n');
+    copyToClipboard(valuesStr);
+
+    const statusDisplay = document.getElementById('statusDisplay');
+    statusDisplay.textContent = `✅ Copied ${generatedValues.length} values to clipboard`;
+}
+
+function clearTable() {
+    generatedValues = [];
+    const tbody = document.getElementById('valuesTableBody');
+    if (tbody) tbody.innerHTML = '';
+    
+    const statusDisplay = document.getElementById('statusDisplay');
+    if (statusDisplay) statusDisplay.textContent = 'Table cleared. Ready for new generation.';
+    
+    showNotification('Table cleared', 'info');
+}
+
+function exportToCSV() {
+    if (generatedValues.length === 0) {
+        alert('No values to export. Generate values first.');
+        return;
+    }
+
+    const decimals = parseInt(getInputValue('decimals'));
+    const csvContent = "Value\n" + generatedValues.map(v => formatNumber(v, decimals)).join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'cpk_generated_values.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+
+    showNotification(`Exported ${generatedValues.length} values to CSV`, 'success');
+}
