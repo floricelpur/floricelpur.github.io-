@@ -161,7 +161,7 @@ function createLeftColumn() {
                 <div class="row g-2 mb-2">
                     <div class="col-6">
                         <label class="form-label">Target Cpk:</label>
-                        <input type="text" class="form-control" id="targetCpk" autocomplete="off">
+                        <input type="text" class="form-control" id="targetCpk" value="1.67" autocomplete="off">
                     </div>
                     <div class="col-6">
                         <label class="form-label">Decimals:</label>
@@ -178,7 +178,7 @@ function createLeftColumn() {
                 <div class="row g-2 mb-2">
                     <div class="col-6">
                         <label class="form-label">Sample Size:</label>
-                        <input type="text" class="form-control" id="sampleSize" autocomplete="off">
+                        <input type="text" class="form-control" id="sampleSize" value="125" autocomplete="off">
                     </div>
                     <div class="col-6">
                         <label class="form-label">Subgroup Size:</label>
@@ -473,7 +473,7 @@ function createRightColumn() {
                     </div>
                     <div class="col-6">
                         <label class="form-label">Max Iterations:</label>
-                        <input type="text" class="form-control" id="maxIterations" autocomplete="off">
+                        <input type="text" class="form-control" id="maxIterations" value="1000" autocomplete="off">
                     </div>
                 </div>
 
@@ -487,7 +487,7 @@ function createRightColumn() {
                 <div class="row g-2 mb-3">
                     <div class="col-6">
                         <label class="form-label">Adjustment Factor:</label>
-                        <input type="text" class="form-control" id="adjFactor" autocomplete="off">
+                        <input type="text" class="form-control" id="adjFactor" value="0.95" autocomplete="off">
                     </div>
                 </div>
 
