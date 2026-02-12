@@ -634,6 +634,7 @@ function updateHistogram(values, lsl, usl, decimals, minVal, maxVal, forceRange)
             barPercentage: 1.0,
             categoryPercentage: 1.0,
             borderRadius: 2,
+            order: 1,
             type: 'bar'
         },
         {
@@ -645,6 +646,7 @@ function updateHistogram(values, lsl, usl, decimals, minVal, maxVal, forceRange)
             fill: false,
             pointRadius: 0,
             tension: 0.3,
+            order: 3,
             type: 'line',
             yAxisID: 'y'
         }
