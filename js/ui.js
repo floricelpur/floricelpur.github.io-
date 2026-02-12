@@ -651,38 +651,12 @@ function updateHistogram(values, lsl, usl, decimals, minVal, maxVal, forceRange)
     ];
 
     // Create the chart with a numeric x-axis and annotation lines for mean/LSL/USL/Target
-    // Plugin to force-draw the normal distribution line above bars
-    const drawLineOnTopPlugin = {
-        id: 'drawLineOnTopPlugin',
-        afterDatasetsDraw: function(chart) {
-            const dsIndex = chart.data.datasets.findIndex(d => d.label === 'Normal Distribution');
-            if (dsIndex === -1) return;
-            const meta = chart.getDatasetMeta(dsIndex);
-            if (!meta || !meta.data) return;
-
-            const ctx = chart.ctx;
-            ctx.save();
-            const dataset = chart.data.datasets[dsIndex];
-            ctx.lineWidth = dataset.borderWidth || 3;
-            ctx.strokeStyle = dataset.borderColor || '#c0392b';
-            ctx.beginPath();
-            meta.data.forEach((el, i) => {
-                const px = el.x;
-                const py = el.y;
-                if (i === 0) ctx.moveTo(px, py);
-                else ctx.lineTo(px, py);
-            });
-            ctx.stroke();
-            ctx.restore();
-        }
-    };
-
+    // Ensure the normal distribution dataset is drawn after the bars by setting a high order
     histogramChart = new Chart(ctx, {
         type: 'bar',
         data: {
             datasets: datasets
         },
-        plugins: [drawLineOnTopPlugin],
         options: {
             responsive: true,
             maintainAspectRatio: false,
