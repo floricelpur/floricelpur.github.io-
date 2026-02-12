@@ -440,8 +440,6 @@ function createRightColumn() {
                     <small class="text-muted">
                         <span class="badge bg-success me-1">—</span> Mean &nbsp;&nbsp;
                         <span class="badge bg-danger me-1">—</span> LSL/USL &nbsp;&nbsp;
-                        <span class="badge bg-warning me-1">—</span> Target &nbsp;&nbsp;
-                        <span class="badge bg-primary me-1">▇</span> Data &nbsp;&nbsp;
                         <span class="badge bg-danger me-1">—</span> Normal Curve
                     </small>
                 </div>
