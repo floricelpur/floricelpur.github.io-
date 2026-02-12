@@ -8,9 +8,32 @@ function parseNumber(text) {
 
 function formatNumber(value, decimals) {
     if (value === Infinity || value === -Infinity) return '∞';
-    if (isNaN(value)) return 'N/A';
     if (value === null || value === undefined) return 'N/A';
-    return value.toFixed(decimals);
+
+    // If passed an object from chart data like {x, y}, prefer the numeric component
+    if (typeof value === 'object') {
+        if (value === null) return 'N/A';
+        if (typeof value.x === 'number') value = value.x;
+        else if (typeof value.y === 'number') value = value.y;
+        else {
+            // try to coerce object to number
+            const coerced = Number(value);
+            if (!Number.isFinite(coerced)) return 'N/A';
+            value = coerced;
+        }
+    }
+
+    // If value is a numeric string, parse it
+    if (typeof value === 'string') {
+        const normalized = value.trim().replace(',', '.');
+        const parsed = parseFloat(normalized);
+        if (Number.isFinite(parsed)) value = parsed;
+        else return 'N/A';
+    }
+
+    if (typeof value !== 'number' || isNaN(value)) return 'N/A';
+    const d = (typeof decimals === 'number' && decimals >= 0) ? decimals : 2;
+    return value.toFixed(d);
 }
 
 function delay(ms) {
