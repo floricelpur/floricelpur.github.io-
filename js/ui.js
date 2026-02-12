@@ -633,13 +633,14 @@ function updateHistogram(values, lsl, usl, decimals, minVal, maxVal, forceRange)
             borderWidth: 1,
             barPercentage: 1.0,
             categoryPercentage: 1.0,
+            borderRadius: 2,
             type: 'bar'
         },
         {
             label: 'Normal Distribution',
             data: curveData,
-            borderColor: '#e74c3c',
-            borderWidth: 2.5,
+            borderColor: '#c0392b',
+            borderWidth: 3,
             backgroundColor: 'rgba(231, 76, 60, 0.05)',
             fill: false,
             pointRadius: 0,
@@ -696,12 +697,14 @@ function updateHistogram(values, lsl, usl, decimals, minVal, maxVal, forceRange)
                             borderWidth: 2.5,
                             borderDash: [5,5],
                             label: {
-                                enabled: true,
-                                content: `Mean: ${formatNumber(meanVal, Math.max(2, decimals))}`,
-                                position: 'start',
-                                backgroundColor: '#20c997',
-                                color: '#fff'
-                            }
+                                    enabled: true,
+                                    content: `Mean: ${formatNumber(meanVal, Math.max(3, decimals))}`,
+                                    position: 'start',
+                                    backgroundColor: '#20c997',
+                                    color: '#fff',
+                                    yAdjust: -10,
+                                    font: { weight: 'bold' }
+                                }
                         };
 
                         if (hasLsl && !isNaN(lsl)) {
@@ -712,7 +715,7 @@ function updateHistogram(values, lsl, usl, decimals, minVal, maxVal, forceRange)
                                 borderColor: '#e74c3c',
                                 borderWidth: 2.5,
                                 borderDash: [8,4],
-                                label: { enabled: true, content: `LSL: ${formatNumber(lsl, decimals)}`, position: 'start', backgroundColor: '#e74c3c', color: '#fff' }
+                                label: { enabled: true, content: `LSL: ${formatNumber(lsl, Math.max(3, decimals))}`, position: 'start', backgroundColor: '#e74c3c', color: '#fff', yAdjust: -10, font: { weight: 'bold' } }
                             };
                         }
 
@@ -724,7 +727,7 @@ function updateHistogram(values, lsl, usl, decimals, minVal, maxVal, forceRange)
                                 borderColor: '#e74c3c',
                                 borderWidth: 2.5,
                                 borderDash: [8,4],
-                                label: { enabled: true, content: `USL: ${formatNumber(usl, decimals)}`, position: 'end', backgroundColor: '#e74c3c', color: '#fff' }
+                                label: { enabled: true, content: `USL: ${formatNumber(usl, Math.max(3, decimals))}`, position: 'end', backgroundColor: '#e74c3c', color: '#fff', yAdjust: -10, font: { weight: 'bold' } }
                             };
                         }
 
@@ -736,7 +739,7 @@ function updateHistogram(values, lsl, usl, decimals, minVal, maxVal, forceRange)
                                 borderColor: '#f39c12',
                                 borderWidth: 2,
                                 borderDash: [6,3],
-                                label: { enabled: true, content: `Target: ${formatNumber(target, decimals)}`, position: 'center', backgroundColor: '#f39c12', color: '#000' }
+                                label: { enabled: true, content: `Target: ${formatNumber(target, Math.max(3, decimals))}`, position: 'center', backgroundColor: '#f39c12', color: '#000', yAdjust: -8, font: { weight: '600' } }
                             };
                         }
 
@@ -744,14 +747,15 @@ function updateHistogram(values, lsl, usl, decimals, minVal, maxVal, forceRange)
                     })()
                 }
             },
-            scales: {
+                scales: {
                 x: {
                     type: 'linear',
                     title: { display: true, text: 'Measured Value', font: { weight: 'bold', size: 12 } },
                     grid: { color: 'rgba(0,0,0,0.05)' },
                     ticks: {
                         callback: function(val, index, ticks) {
-                            return formatNumber(this.getLabelForValue(val), Math.max(2, decimals));
+                            const dec = Math.max(3, decimals);
+                            return formatNumber(this.getLabelForValue(val), dec);
                         }
                     }
                 },
