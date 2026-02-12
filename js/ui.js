@@ -586,7 +586,7 @@ function updateValuesTable(values, decimals) {
 
 function updateHistogram(values, lsl, usl, decimals, minVal, maxVal, forceRange) {
     const ctx = document.getElementById('histogramChart').getContext('2d');
-    
+
     if (histogramChart) {
         histogramChart.destroy();
     }
@@ -599,57 +599,40 @@ function updateHistogram(values, lsl, usl, decimals, minVal, maxVal, forceRange)
     const hasUsl = specType !== 'unilateral_lsl';
     const target = specType === 'bilateral' ? (lsl + usl) / 2 : meanVal;
 
-    const binCount = Math.max(8, Math.min(20, Math.ceil(Math.log2(n)) + 1));
+    const binCount = Math.max(8, Math.min(40, Math.ceil(Math.log2(n)) + 1));
     const dataMin = Math.min(...values);
     const dataMax = Math.max(...values);
-    const range = dataMax - dataMin;
+    const range = dataMax - dataMin || 1;
     const binWidth = range / binCount;
-    
-    const bins = Array(binCount).fill(0);
+
     const binEdges = Array(binCount + 1).fill(0).map((_, i) => dataMin + i * binWidth);
-    
+    const mids = binEdges.slice(0, -1).map(edge => edge + binWidth / 2);
+
+    const bins = Array(binCount).fill(0);
     values.forEach(value => {
         let binIndex = Math.floor((value - dataMin) / binWidth);
-        if (binIndex === binCount) binIndex = binCount - 1;
+        if (binIndex < 0) binIndex = 0;
+        if (binIndex >= binCount) binIndex = binCount - 1;
         bins[binIndex]++;
     });
 
-    const labels = binEdges.slice(0, -1).map((edge, i) => {
-        const mid = edge + binWidth / 2;
-        return formatNumber(mid, Math.max(2, decimals));
-    });
-
-    const maxBinHeight = Math.max(...bins);
-    const maxPDF = normalPDF(meanVal, meanVal, stdDevOverall);
+    const maxBinHeight = Math.max(...bins, 1);
+    const maxPDF = normalPDF(meanVal, meanVal, stdDevOverall) || 1e-9;
     const curveScale = (maxBinHeight * 0.7) / maxPDF;
 
-    // Generate normal distribution curve aligned with bin centers
-    const curveData = binEdges.slice(0, -1).map((edge, i) => {
-        const mid = edge + binWidth / 2;
-        const pdf = normalPDF(mid, meanVal, stdDevOverall);
-        return pdf * curveScale;
-    });
-
-    // Create reference lines data
-    const createLineData = (value) => {
-        if (isNaN(value)) return null;
-        return binEdges.slice(0, -1).map(edge => {
-            const mid = edge + binWidth / 2;
-            const diff = Math.abs(mid - value);
-            // Mark position of reference line
-            return diff < binWidth * 0.1 ? maxBinHeight * 0.95 : null;
-        });
-    };
+    // Build datasets using numeric x values so vertical annotation lines can be precise
+    const barData = mids.map((mid, i) => ({ x: mid, y: bins[i] }));
+    const curveData = mids.map(mid => ({ x: mid, y: normalPDF(mid, meanVal, stdDevOverall) * curveScale }));
 
     const datasets = [
         {
             label: 'Frequency',
-            data: bins,
-            backgroundColor: 'rgba(77, 171, 247, 0.7)',
+            data: barData,
+            backgroundColor: 'rgba(77, 171, 247, 0.85)',
             borderColor: 'rgba(77, 171, 247, 1)',
             borderWidth: 1,
-            barPercentage: 0.85,
-            categoryPercentage: 0.9,
+            barPercentage: 1.0,
+            categoryPercentage: 1.0,
             type: 'bar'
         },
         {
@@ -661,123 +644,38 @@ function updateHistogram(values, lsl, usl, decimals, minVal, maxVal, forceRange)
             fill: false,
             pointRadius: 0,
             tension: 0.3,
-            type: 'line'
+            type: 'line',
+            yAxisID: 'y'
         }
     ];
 
-    // Add Mean line
-    datasets.push({
-        label: `Mean: ${formatNumber(meanVal, decimals)}`,
-        data: labels.map(label => {
-            const val = parseFloat(label);
-            const diff = Math.abs(val * 1 - meanVal);
-            return diff < binWidth * 0.15 ? maxBinHeight * 0.88 : null;
-        }),
-        borderColor: '#20c997',
-        borderWidth: 2.5,
-        borderDash: [5, 5],
-        pointRadius: 0,
-        fill: false,
-        type: 'line'
-    });
-
-    // Add LSL line
-    if (hasLsl && !isNaN(lsl)) {
-        datasets.push({
-            label: `LSL: ${formatNumber(lsl, decimals)}`,
-            data: labels.map(label => {
-                const val = parseFloat(label);
-                const diff = Math.abs(val * 1 - lsl);
-                return diff < binWidth * 0.15 ? maxBinHeight * 0.82 : null;
-            }),
-            borderColor: '#e74c3c',
-            borderWidth: 2.5,
-            borderDash: [8, 4],
-            pointRadius: 0,
-            fill: false,
-            type: 'line'
-        });
-    }
-
-    // Add USL line
-    if (hasUsl && !isNaN(usl)) {
-        datasets.push({
-            label: `USL: ${formatNumber(usl, decimals)}`,
-            data: labels.map(label => {
-                const val = parseFloat(label);
-                const diff = Math.abs(val * 1 - usl);
-                return diff < binWidth * 0.15 ? maxBinHeight * 0.76 : null;
-            }),
-            borderColor: '#e74c3c',
-            borderWidth: 2.5,
-            borderDash: [8, 4],
-            pointRadius: 0,
-            fill: false,
-            type: 'line'
-        });
-    }
-
-    // Add Target line
-    if (specType === 'bilateral') {
-        datasets.push({
-            label: `Target: ${formatNumber(target, decimals)}`,
-            data: labels.map(label => {
-                const val = parseFloat(label);
-                const diff = Math.abs(val * 1 - target);
-                return diff < binWidth * 0.15 ? maxBinHeight * 0.70 : null;
-            }),
-            borderColor: '#f39c12',
-            borderWidth: 2,
-            borderDash: [6, 3],
-            pointRadius: 0,
-            fill: false,
-            type: 'line'
-        });
-    }
-
+    // Create the chart with a numeric x-axis and annotation lines for mean/LSL/USL/Target
     histogramChart = new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: labels,
             datasets: datasets
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            parsing: false,
             interaction: {
-                mode: 'index',
+                mode: 'nearest',
                 intersect: false
             },
             plugins: {
-                legend: {
-                    display: true,
-                    position: 'top',
-                    maxHeight: 60,
-                    labels: {
-                        font: { size: 10, weight: 'bold' },
-                        usePointStyle: true,
-                        padding: 12
-                    }
-                },
+                legend: { display: true, position: 'top' },
                 tooltip: {
                     enabled: true,
-                    backgroundColor: 'rgba(0,0,0,0.85)',
-                    titleColor: '#fff',
-                    bodyColor: '#fff',
-                    borderColor: 'rgba(255,255,255,0.2)',
-                    borderWidth: 1,
-                    titleFont: { size: 12, weight: 'bold' },
-                    bodyFont: { size: 11 },
-                    padding: 10,
                     callbacks: {
                         title: function(context) {
-                            const idx = context[0].dataIndex;
-                            const lower = binEdges[idx];
-                            const upper = binEdges[idx + 1];
+                            const x = context[0].parsed.x;
+                            const lower = x - binWidth / 2;
+                            const upper = x + binWidth / 2;
                             return `Range: ${formatNumber(lower, decimals)} - ${formatNumber(upper, decimals)}`;
                         },
                         label: function(context) {
-                            if (!context.dataset.type || context.dataset.type === 'bar') {
+                            if (context.dataset.type === 'bar') {
                                 const value = context.parsed.y;
                                 const pct = ((value / n) * 100).toFixed(1);
                                 return `Count: ${value} (${pct}%)`;
@@ -785,24 +683,81 @@ function updateHistogram(values, lsl, usl, decimals, minVal, maxVal, forceRange)
                             return context.dataset.label || '';
                         }
                     }
+                },
+                annotation: {
+                    annotations: (function() {
+                        const a = {};
+                        // Mean
+                        a.meanLine = {
+                            type: 'line',
+                            xMin: meanVal,
+                            xMax: meanVal,
+                            borderColor: '#20c997',
+                            borderWidth: 2.5,
+                            borderDash: [5,5],
+                            label: {
+                                enabled: true,
+                                content: `Mean: ${formatNumber(meanVal, Math.max(2, decimals))}`,
+                                position: 'start',
+                                backgroundColor: '#20c997',
+                                color: '#fff'
+                            }
+                        };
+
+                        if (hasLsl && !isNaN(lsl)) {
+                            a.lslLine = {
+                                type: 'line',
+                                xMin: lsl,
+                                xMax: lsl,
+                                borderColor: '#e74c3c',
+                                borderWidth: 2.5,
+                                borderDash: [8,4],
+                                label: { enabled: true, content: `LSL: ${formatNumber(lsl, decimals)}`, position: 'start', backgroundColor: '#e74c3c', color: '#fff' }
+                            };
+                        }
+
+                        if (hasUsl && !isNaN(usl)) {
+                            a.uslLine = {
+                                type: 'line',
+                                xMin: usl,
+                                xMax: usl,
+                                borderColor: '#e74c3c',
+                                borderWidth: 2.5,
+                                borderDash: [8,4],
+                                label: { enabled: true, content: `USL: ${formatNumber(usl, decimals)}`, position: 'end', backgroundColor: '#e74c3c', color: '#fff' }
+                            };
+                        }
+
+                        if (specType === 'bilateral') {
+                            a.targetLine = {
+                                type: 'line',
+                                xMin: target,
+                                xMax: target,
+                                borderColor: '#f39c12',
+                                borderWidth: 2,
+                                borderDash: [6,3],
+                                label: { enabled: true, content: `Target: ${formatNumber(target, decimals)}`, position: 'center', backgroundColor: '#f39c12', color: '#000' }
+                            };
+                        }
+
+                        return a;
+                    })()
                 }
             },
             scales: {
                 x: {
-                    title: {
-                        display: true,
-                        text: 'Measured Value',
-                        font: { weight: 'bold', size: 12 }
-                    },
-                    grid: { color: 'rgba(0,0,0,0.05)' }
+                    type: 'linear',
+                    title: { display: true, text: 'Measured Value', font: { weight: 'bold', size: 12 } },
+                    grid: { color: 'rgba(0,0,0,0.05)' },
+                    ticks: {
+                        callback: function(val, index, ticks) {
+                            return formatNumber(this.getLabelForValue(val), Math.max(2, decimals));
+                        }
+                    }
                 },
                 y: {
                     beginAtZero: true,
-                    title: {
-                        display: true,
-                        text: 'Frequency',
-                        font: { weight: 'bold', size: 12 }
-                    },
+                    title: { display: true, text: 'Frequency', font: { weight: 'bold', size: 12 } },
                     grid: { color: 'rgba(0,0,0,0.05)' },
                     suggestedMax: maxBinHeight * 1.1
                 }
