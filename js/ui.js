@@ -439,8 +439,7 @@ function createRightColumn() {
                 <div class="mt-2 text-center">
                     <small class="text-muted">
                         <span class="badge bg-success me-1">—</span> Mean &nbsp;&nbsp;
-                        <span class="badge bg-danger me-1">—</span> LSL/USL &nbsp;&nbsp;
-                        <span class="badge bg-danger me-1">—</span> Normal Curve
+                        <span class="badge bg-danger me-1">—</span> LSL/USL
                     </small>
                 </div>
             </div>
@@ -622,19 +621,9 @@ function updateHistogram(values, lsl, usl, decimals, minVal, maxVal, forceRange)
     const barData = mids.map((mid, i) => ({ x: mid, y: bins[i] }));
     const curveData = mids.map(mid => ({ x: mid, y: normalPDF(mid, meanVal, stdDevOverall) * curveScale }));
 
+    // Put Normal Distribution dataset first so it appears before Frequency in the legend,
+    // but keep its drawing order higher so it's rendered above the bars.
     const datasets = [
-        {
-            label: 'Frequency',
-            data: barData,
-            backgroundColor: 'rgba(77, 171, 247, 0.85)',
-            borderColor: 'rgba(77, 171, 247, 1)',
-            borderWidth: 1,
-            barPercentage: 1.0,
-            categoryPercentage: 1.0,
-            borderRadius: 2,
-            order: 1,
-            type: 'bar'
-        },
         {
             label: 'Normal Distribution',
             data: curveData,
@@ -647,6 +636,18 @@ function updateHistogram(values, lsl, usl, decimals, minVal, maxVal, forceRange)
             order: 3,
             type: 'line',
             yAxisID: 'y'
+        },
+        {
+            label: 'Frequency',
+            data: barData,
+            backgroundColor: 'rgba(77, 171, 247, 0.85)',
+            borderColor: 'rgba(77, 171, 247, 1)',
+            borderWidth: 1,
+            barPercentage: 1.0,
+            categoryPercentage: 1.0,
+            borderRadius: 2,
+            order: 1,
+            type: 'bar'
         }
     ];
 
